@@ -1,0 +1,121 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with personal details, verification tier, and security settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "kycTier": { "type": "string" },
+        "twoFactorEnabled": { "type": "boolean" },
+        "securityAlertsEnabled": { "type": "boolean" },
+        "loginAlertsEnabled": { "type": "boolean" },
+        "joinedDate": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "email"]
+    },
+    "Wallet": {
+      "title": "Wallet",
+      "description": "User wallet holdings and balance details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "availableBalanceUsd": { "type": "number" },
+        "unsettledFeeUsd": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "availableBalanceUsd"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "User financial transaction ledger record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["DEPOSIT", "WITHDRAWAL", "BUY", "SELL", "TRANSFER"] },
+        "asset": { "type": "string" },
+        "amount": { "type": "number" },
+        "valueUsd": { "type": "number" },
+        "feeUsd": { "type": "number" },
+        "status": { "type": "string", "enum": ["COMPLETED", "PENDING", "FAILED"] },
+        "date": { "type": "string" },
+        "txHash": { "type": "string" }
+      },
+      "required": ["id", "userId", "type", "amount", "status", "date"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "User spot or limit trading order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "pair": { "type": "string" },
+        "type": { "type": "string", "enum": ["LIMIT", "MARKET", "STOP_LIMIT"] },
+        "side": { "type": "string", "enum": ["BUY", "SELL"] },
+        "price": { "type": "number" },
+        "amount": { "type": "number" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["OPEN", "FILLED", "CANCELLED"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "pair", "type", "side", "amount", "status"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Security and authentication activity log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "event": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "location": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "status": { "type": "string", "enum": ["SUCCESS", "WARNING", "FAILED"] }
+      },
+      "required": ["id", "userId", "event", "timestamp", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile accessible only by the authenticated owner"
+    },
+    "/users/{userId}/wallets/{walletId}": {
+      "schema": { "$ref": "#/entities/Wallet" },
+      "description": "Private user wallet balances accessible only by the authenticated owner"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Private user transactions accessible only by the authenticated owner"
+    },
+    "/users/{userId}/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Private user trading orders accessible only by the authenticated owner"
+    },
+    "/users/{userId}/activityLogs/{logId}": {
+      "schema": { "$ref": "#/entities/ActivityLog" },
+      "description": "Private security logs accessible only by the authenticated owner"
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Direct transaction records partitioned by userId"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Direct orders partitioned by userId"
+    },
+    "/activityLogs/{logId}": {
+      "schema": { "$ref": "#/entities/ActivityLog" },
+      "description": "Direct activity audit logs partitioned by userId"
+    }
+  }
+}

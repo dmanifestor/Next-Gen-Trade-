@@ -1,0 +1,175 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Authentication
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // ===============================================================
+    // Roles (Custom Claims)
+    // ===============================================================
+
+    function isAdmin() {
+      return isAuthenticated() &&
+             request.auth.token.admin == true;
+    }
+
+    function isModerator() {
+      return isAuthenticated() &&
+             request.auth.token.moderator == true;
+    }
+
+    function isViewer() {
+      return isAuthenticated() &&
+             request.auth.token.viewer == true;
+    }
+
+    function isStaff() {
+      return isAdmin() || isModerator();
+    }
+
+    // ===============================================================
+    // Ownership Helpers
+    // ===============================================================
+
+    function isOwner(userId) {
+      return isAuthenticated() &&
+             request.auth.uid == userId;
+    }
+
+    function isExistingDocOwner() {
+      return isAuthenticated() &&
+             resource.data.userId == request.auth.uid;
+    }
+
+    function isIncomingDocOwner() {
+      return isAuthenticated() &&
+             request.resource.data.userId == request.auth.uid;
+    }
+
+    // ===============================================================
+    // USERS
+    // ===============================================================
+
+    match /users/{userId} {
+
+      // Admins & Moderators can read any user
+      // Users can read their own profile
+      allow get, list: if isStaff() || isOwner(userId);
+
+      // Only Admins or owner can edit
+      allow create, update, delete:
+        if isAdmin() || isOwner(userId);
+
+      match /{allSubcollections=**} {
+
+        allow get, list:
+          if isStaff() || isOwner(userId);
+
+        allow create, update, delete:
+          if isAdmin() || isOwner(userId);
+      }
+    }
+
+    // ===============================================================
+    // TRANSACTIONS
+    // ===============================================================
+
+    match /transactions/{transactionId} {
+
+      // Admin & Moderator can view all
+      // Owner can view own
+      allow get, list:
+        if isStaff() || isExistingDocOwner();
+
+      // Admin can create for anyone
+      // User can create own record
+      allow create:
+        if isAdmin() || isIncomingDocOwner();
+
+      // Admin or owner can update
+      allow update:
+        if isAdmin() ||
+           (isExistingDocOwner() && isIncomingDocOwner());
+
+      allow delete:
+        if isAdmin() || isExistingDocOwner();
+    }
+
+    // ===============================================================
+    // WALLETS
+    // ===============================================================
+
+    match /wallets/{walletId} {
+
+      allow get, list:
+        if isStaff() || isExistingDocOwner();
+
+      allow create:
+        if isAdmin() || isIncomingDocOwner();
+
+      allow update:
+        if isAdmin() ||
+           (isExistingDocOwner() && isIncomingDocOwner());
+
+      allow delete:
+        if isAdmin() || isExistingDocOwner();
+    }
+
+    // ===============================================================
+    // ORDERS
+    // ===============================================================
+
+    match /orders/{orderId} {
+
+      allow get, list:
+        if isStaff() || isExistingDocOwner();
+
+      allow create:
+        if isAdmin() || isIncomingDocOwner();
+
+      allow update:
+        if isAdmin() ||
+           (isExistingDocOwner() && isIncomingDocOwner());
+
+      allow delete:
+        if isAdmin() || isExistingDocOwner();
+    }
+
+    // ===============================================================
+    // ACTIVITY LOGS
+    // ===============================================================
+
+    match /activityLogs/{logId} {
+
+      allow get, list:
+        if isStaff() || isExistingDocOwner();
+
+      allow create:
+        if isAdmin() || isIncomingDocOwner();
+
+      allow update:
+        if isAdmin() ||
+           (isExistingDocOwner() && isIncomingDocOwner());
+
+      allow delete:
+        if isAdmin() || isExistingDocOwner();
+    }
+
+    // ===============================================================
+    // VIEWER ACCESS
+    // Viewers can read everything but cannot modify anything
+    // ===============================================================
+
+    match /{document=**} {
+      allow read: if isViewer();
+      allow write: if false;
+    }
+  }
+}
